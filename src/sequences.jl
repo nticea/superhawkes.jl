@@ -49,7 +49,7 @@ function forward_pass_tree(P::SuperHawkesProcess, spikes::Spikes)
     return alphas
 end
 
-function backward_sample_tree!(P::SuperHawkesProcess, spikes::Spikes, alphas, true_sequenceIDs)
+function backward_sample_tree!(P::SuperHawkesProcess, spikes::Spikes, alphas)
     S,K = size(alphas)
     parents = spikes.parents
     
@@ -68,7 +68,6 @@ function backward_sample_tree!(P::SuperHawkesProcess, spikes::Spikes, alphas, tr
     # Sample backward given forward messages and samples thus far
     for s in S-1:-1:1  #iterate backward through the spikes
         lp = copy(alphas[s,:])
-        #println("before ", exp.(lp))
         for ch in findall((x) -> x == s, parents) #find the children of the current spike
             lp += pairwise_potential(P, spikes, ch, s)[:,Int(samples[ch])]
         end

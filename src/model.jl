@@ -6,40 +6,30 @@ import Base: length
 
 function make_α0(N::Int, K::Int, prior_α0=nothing)
     if isnothing(prior_α0)
-        #The default is to return all ones
-        prior_α0 = ones(N*K)
+        prior_α0 = zeros(N*K) .+ eps()
+        #Each sequence sources a non-overlapping subset of nodes
+        for k in 1:K
+            start_idx = (k-1)*(N+1) + 1 + (k-1)*div(N,K)
+            end_idx = min(N*K,start_idx+1)#div(N,K))
+            prior_α0[start_idx:end_idx] .= 1
+        end
     end
     SuperArray(N=N,K=K,array=prior_α0)
 end
 
-function make_β0(N::Int, K::Int, prior_β0=nothing)
-    if isnothing(prior_β0)
-        #The default is to assign a different β0 to each sequence
-        prior_β0 = repeat(rand(K),inner=N)
+function make_θ0(N::Int, K::Int, prior_θ0=nothing)
+    if isnothing(prior_θ0)
+        #The default is to assign a different θ0 to each sequence
+        prior_θ0 = repeat(rand(K),inner=N)
     end
-    SuperArray(N=N,K=K,array=prior_β0)
+    SuperArray(N=N,K=K,array=prior_θ0)
 end
 
-function make_π0(N::Int, K::Int, prior_π0=nothing)
-    if isnothing(prior_π0)
-        #The default is to recruit only a subset of nodes for background on each process
-        #prior_π0 = repeat(rand(K),inner=N)
-        prior_π0 = eps() .* ones(N*K)
-        for k in 1:K
-            start_idx = (k-1)*(N+1) + 1 + (k-1)*div(N,K)
-            end_idx = min(N*K,start_idx+div(N,K))
-            prior_π0[start_idx:end_idx] .= 1
-        end
-    end
-    SuperArray(N=N,K=K,array=prior_π0)
-end
-
-function sample_λ0(N::Int, K::Int, α0::SuperArray, β0::SuperArray, π0::SuperArray)
-    #Create the Gammas and Dirichlet distributions
-    γ0 = Gamma.(α0.array, β0.array) #Gamma with NK elements
-    dirichlet = (Dirichlet(π0.array)) #Dirichlet with NK elements
+function sample_λ0(N::Int, K::Int, α0::SuperArray, θ0::SuperArray)
+    #Create the Gamma
+    λ0 = Gamma.(α0.array, θ0.array) #Gamma with NK elements
     #Sample
-    SuperArray(N=N,K=K,array=rand.(γ0) .* rand(dirichlet) .+ eps())
+    SuperArray(N=N,K=K,array=rand.(λ0) .+ eps())
 end
 
 mutable struct Bias 
@@ -48,29 +38,26 @@ mutable struct Bias
     K::Int    
     #parameters
     α0::SuperArray
-    β0::SuperArray
-    π0::SuperArray
+    θ0::SuperArray
     #actual rate (sampled)
     λ0::SuperArray 
 end
 
 function Bias(N::Int,K::Int, 
               prior_α0::Union{Array{Float64,1},Nothing}=nothing,
-              prior_β0::Union{Array{Float64,1},Nothing}=nothing,
-              prior_π0::Union{Array{Float64,1},Nothing}=nothing)
+              prior_θ0::Union{Array{Float64,1},Nothing}=nothing)
     
     #parameters
     α0::SuperArray = make_α0(N,K,prior_α0) #NK
-    β0::SuperArray = make_β0(N,K,prior_β0) #NK
-    π0::SuperArray = make_π0(N,K,prior_π0) #NK
+    θ0::SuperArray = make_θ0(N,K,prior_θ0) #NK
 
     #sample the parameters to get the bias term
-    λ0::SuperArray = sample_λ0(N,K,α0,β0,π0) #NK 
-    return Bias(N,K,α0,β0,π0,λ0)
+    λ0::SuperArray = sample_λ0(N,K,α0,θ0) #NK 
+    return Bias(N,K,α0,θ0,λ0)
 end
 
 function resample(bias::Bias)
-    bias.λ0 = sample_λ0(bias.N,bias.K,bias.α0,bias.β0,bias.π0)
+    bias.λ0 = sample_λ0(bias.N,bias.K,bias.α0,bias.θ0)
 end
 
 function make_αW(N::Int, K::Int, prior_αW=nothing)
@@ -85,21 +72,21 @@ function make_αW(N::Int, K::Int, prior_αW=nothing)
     SuperMatrix(N=N,K=K,matrix=prior_αW)
 end
 
-function make_βW(N::Int, K::Int, prior_βW=nothing)
-    if isnothing(prior_βW)
-        prior_βW = eps().*ones((N,K,N,K))
+function make_θW(N::Int, K::Int, prior_θW=nothing)
+    if isnothing(prior_θW)
+        prior_θW = eps().*ones((N,K,N,K))
         for k in 1:K
-            prior_βW[:,k,:,k] .= N*NETWORK_SPARSITY
+            prior_θW[:,k,:,k] .= N*NETWORK_SPARSITY
         end
-        prior_βW = flatten_dims(prior_βW,N,K)
+        prior_θW = flatten_dims(prior_θW,N,K)
         #TODO: add a few instances of cross-sequence spike induction!
     end
-    SuperMatrix(N=N,K=K,matrix=prior_βW)
+    SuperMatrix(N=N,K=K,matrix=prior_θW)
 end
 
-function sample_W(N::Int, K::Int, αW::SuperMatrix, βW::SuperMatrix)
+function sample_W(N::Int, K::Int, αW::SuperMatrix, θW::SuperMatrix)
     #Create distribution over the coupling matrix 
-    γW = Gamma.(αW.matrix, βW.matrix)
+    γW = Gamma.(αW.matrix, θW.matrix)
     #Sample
     SuperMatrix(N=N,K=K,matrix=rand.(γW).+eps())
 end
@@ -110,27 +97,27 @@ mutable struct Network
     K::Int  
     #parameters
     αW::SuperMatrix
-    βW::SuperMatrix
+    θW::SuperMatrix
     #coupling matrix (sampled)
     W::SuperMatrix
 end
 
 function Network(N::Int,K::Int,
                 prior_αW::Union{Array{Float64,2},Nothing}=nothing,
-                prior_βW::Union{Array{Float64,2},Nothing}=nothing)
+                prior_θW::Union{Array{Float64,2},Nothing}=nothing)
 
     #parameters
     αW::SuperMatrix = make_αW(N,K,prior_αW)
-    βW::SuperMatrix = make_βW(N,K,prior_βW)
+    θW::SuperMatrix = make_θW(N,K,prior_θW)
 
     #sample the parameters to get the coupling matrix
-    W::SuperMatrix = sample_W(N,K,αW,βW)
+    W::SuperMatrix = sample_W(N,K,αW,θW)
 
-    return Network(N,K,αW,βW,W)
+    return Network(N,K,αW,θW,W)
 end
 
 function resample(network::Network)
-    bias.W = sample_W(network.N,network.K,network.αW,network.βW)
+    bias.W = sample_W(network.N,network.K,network.αW,network.θW)
 end
 
 function make_αR(N::Int, K::Int, prior_αR=nothing)
@@ -141,17 +128,17 @@ function make_αR(N::Int, K::Int, prior_αR=nothing)
     SuperArray(N=N,K=K,array=prior_αR)
 end
 
-function make_βR(N::Int, K::Int, prior_βR=nothing)
-    if isnothing(prior_βR)
-        #The default is to assign a different β0 to each sequence
-        prior_βR = repeat(rand(K),inner=N)
+function make_θR(N::Int, K::Int, prior_θR=nothing)
+    if isnothing(prior_θR)
+        #The default is to assign a different θ0 to each sequence
+        prior_θR = repeat(rand(K),inner=N)
     end
-    SuperArray(N=N,K=K,array=prior_βR)
+    SuperArray(N=N,K=K,array=prior_θR)
 end
 
-function sample_rate(N::Int, K::Int, αR::SuperArray, βR::SuperArray)
+function sample_rate(N::Int, K::Int, αR::SuperArray, θR::SuperArray)
     #Create distribution over the rates
-    γR = Gamma.(αR.array, βR.array)
+    γR = Gamma.(αR.array, θR.array)
     SuperArray(N=N,K=K,array=rand.(γR))
 end
 
@@ -161,26 +148,26 @@ mutable struct Kernel
     K::Int  
     #parameters
     αR::SuperArray
-    βR::SuperArray
+    θR::SuperArray
     #rate (sampled)
     rate::SuperArray
 end
 
 function Kernel(N::Int,K::Int,
                 prior_αR::Union{Array{Float64,1},Nothing}=nothing,
-                prior_βR::Union{Array{Float64,1},Nothing}=nothing)
+                prior_θR::Union{Array{Float64,1},Nothing}=nothing)
     #parameters
     αR::SuperArray = make_αR(N,K,prior_αR)
-    βR::SuperArray = make_αR(N,K,prior_βR)
+    θR::SuperArray = make_αR(N,K,prior_θR)
 
     #sample the parameters to get the kernel
-    rate::SuperArray = sample_rate(N,K,αR,βR)
+    rate::SuperArray = sample_rate(N,K,αR,θR)
 
-    return Kernel(N,K,αR,βR,rate)
+    return Kernel(N,K,αR,θR,rate)
 end
 
 function resample(kernel::Kernel)
-    bias.rate = sample_rate(kernel.N,kernel.K,kernel.αR,kernel.βR)
+    bias.rate = sample_rate(kernel.N,kernel.K,kernel.αR,kernel.θR)
 end
 
 #rewrite the pdf method for the Kernel struct
@@ -218,27 +205,25 @@ end
 
 function SuperHawkesProcess(;N::Int,K::Int=1,T::Real, #unless specified, we assume only 1 sequence type
                             prior_α0::Union{Array{Float64,1},Nothing}=nothing,
-                            prior_β0::Union{Array{Float64,1},Nothing}=nothing,
-                            prior_π0::Union{Array{Float64,1},Nothing}=nothing,
+                            prior_θ0::Union{Array{Float64,1},Nothing}=nothing,
                             prior_αW::Union{Array{Float64,2},Nothing}=nothing,
-                            prior_βW::Union{Array{Float64,2},Nothing} = nothing,
+                            prior_θW::Union{Array{Float64,2},Nothing} = nothing,
                             prior_αR::Union{Array{Float64,1},Nothing} = nothing,
-                            prior_βR::Union{Array{Float64,1},Nothing} = nothing)
+                            prior_θR::Union{Array{Float64,1},Nothing} = nothing)
     
     #Check the dimensions of the inputs
     @assert(isnothing(prior_α0) || size(prior_α0)==(N*K,))
-    @assert(isnothing(prior_β0) || size(prior_β0)==(N*K,))
-    @assert(isnothing(prior_π0) || size(prior_π0)==(N*K,))
+    @assert(isnothing(prior_θ0) || size(prior_θ0)==(N*K,))
     @assert(isnothing(prior_αW) || size(prior_αW)==(N*K,N*K))
-    @assert(isnothing(prior_βW) || size(prior_βW)==(N*K,N*K))
+    @assert(isnothing(prior_θW) || size(prior_θW)==(N*K,N*K))
     @assert(isnothing(prior_αR) || size(prior_αR)==(N*K,))
-    @assert(isnothing(prior_βR) || size(prior_βR)==(N*K,))
+    @assert(isnothing(prior_θR) || size(prior_θR)==(N*K,))
 
     #compute the relevant attributes of the Hawkes struct
     ΔT_max = T/10 
-    bias = Bias(N,K,prior_α0,prior_β0,prior_π0)
-    network = Network(N,K,prior_αW,prior_βW)
-    kernel = Kernel(N,K,prior_αR,prior_βR)
+    bias = Bias(N,K,prior_α0,prior_θ0)
+    network = Network(N,K,prior_αW,prior_θW)
+    kernel = Kernel(N,K,prior_αR,prior_θR)
     
     return SuperHawkesProcess(N,K,T,ΔT_max,bias,network,kernel)
 end

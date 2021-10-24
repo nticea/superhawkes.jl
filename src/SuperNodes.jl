@@ -110,7 +110,6 @@ function Base.setindex!(a::SuperMatrix, v, n1::Int, k1::Int, n2=nothing, k2=noth
         #but we must also update the flat matrix
         ñ1k̃1,ñ2k̃2 = to_supernode(a, n1, k1, n2, k2)
         a.matrix[ñ1k̃1,ñ2k̃2] = v
-        println("I've seemingly modified the matrix...", a.matrix[ñ1k̃1,ñ2k̃2])
     end
 end
 

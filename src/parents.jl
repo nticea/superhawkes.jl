@@ -24,7 +24,7 @@ end
     spikes::Spikes
     lookbacks::Array{Int,1}, length S: list of vectors containing potential parents for each spike
 """
-function sample_parents!(P::SuperHawkesProcess, spikes::Spikes, lookbacks::Vector{Vector{Int64}})
+function sample_parents!(P::SuperHawkesProcess, spikes::Spikes, lookbacks::Vector{Vector{Int64}}, true_parents)
     #extract the background and coupling matrix
     spike_list = copy(partially_observed_spikes(spikes))
     parent_list = copy(spikes.parents)
@@ -46,6 +46,31 @@ function sample_parents!(P::SuperHawkesProcess, spikes::Spikes, lookbacks::Vecto
         else
             parent_list[j] = lookbacks[j][sample]
         end
+        # if parent_list[j] != true_parents[j] && true_parents[j]>0
+        #     tp,np = spike_list[true_parents[j]]
+
+        #     println("")
+        #     println("Spike: ", j, " True parent: ", true_parents[j])
+        #     for (ωj, (tp, np)) in enumerate(spike_list[lookbacks[j]])
+        #         probs[ωj+1] = W[n, np] * evaluate_pdf(kernel, t-tp, np)
+        #         println("probability of ", lookbacks[j][ωj], ": ", probs[ωj+1])
+        #     end
+
+        #     #println("Probs: ", probs)
+        #     println("")
+        #     println("True parent network: ", W[n, np])
+        #     println("True parent kernel: ", evaluate_pdf(kernel, t-tp, np))
+        #     println("True parent prob: ",  W[n, np]*evaluate_pdf(kernel, t-tp, np))
+        #     println("Sampled parent: ", parent_list[j])
+        #     println("Sampled parent probs: ", probs[sample+1])
+        #     # full_spike_list = fully_observed_spikes(spikes)
+        #     # println("True parent node: ", full_spike_list[true_parents[j]][2])
+        #     # println("True parent process: ", full_spike_list[true_parents[j]][3])
+        #     # println("True child node: ", full_spike_list[j][2])
+        #     # println("True child process: ", full_spike_list[j][3])
+        #     # println("True parent network (indexing into tensor): ", W[full_spike_list[j][2],full_spike_list[j][3],
+        #     #         full_spike_list[true_parents[j]][2],full_spike_list[true_parents[j]][3]])
+        # end
     end
     spikes.parents = convert(Array{Int,1},parent_list)
 end

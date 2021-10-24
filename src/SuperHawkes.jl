@@ -26,6 +26,7 @@ using Base: @kwdef
 # Generative model
 export SuperHawkesProcess, Spikes
 export sample, resample, plot_spikes, partially_observed_spikes, fully_observed_spikes, length, get_parents, get_sequenceIDs
+export evaluate_pdf
 
 # Inference
 export get_lookback_spikes, sample_parents!

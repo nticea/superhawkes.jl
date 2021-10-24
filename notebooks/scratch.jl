@@ -149,13 +149,13 @@ sa_2D[n1k1,n2k2]
 
 # ╔═╡ a36d599f-902b-41d0-abfa-2471935cc730
 #It all works!! Yipee!
-prior_β0 = repeat(rand(3),inner=N)
+prior_θ0 = repeat(rand(3),inner=N)
 
 # ╔═╡ 2db83aae-d72c-42fc-a5fd-0f833272f522
-β0 = SuperNodes.SuperArray(N=N,K=K,array=prior_β0)
+θ0 = SuperNodes.SuperArray(N=N,K=K,array=prior_θ0)
 
 # ╔═╡ f8f43b61-8f33-4ef1-8a32-f4ad07165534
-dir = Dirichlet(β0.array)
+dir = Dirichlet(θ0.array)
 
 # ╔═╡ e7dd8171-c0c6-4206-82fb-c4cec1ef8f9d
 size(dir.alpha)

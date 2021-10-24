@@ -4,14 +4,8 @@ function update_α0(α0::SuperArray, source_spikes::Array{Tuple{Float64, Int64},
     return α0.array + h.weights
 end
 
-function update_β0(β0::SuperArray, T::Real)
-    return β0.array .+ T
-end
-
-function update_π0(π0::SuperArray, source_spikes::Array{Tuple{Float64, Int64},1}, NK::Int)
-    source_nodes = [s[2] for s in source_spikes]
-    h = fit(Histogram, source_nodes, 1:NK+1)
-    return π0.array + h.weights
+function update_θ0(θ0::SuperArray, T::Real)
+    return θ0.array ./ (T*θ0.array .+ 1) #θ0.array .+ T
 end
 
 function update_αW(αW::SuperMatrix, spike_list::Array{Tuple{Float64, Int64},1}, parents::Array{Int64,1})
@@ -26,12 +20,12 @@ function update_αW(αW::SuperMatrix, spike_list::Array{Tuple{Float64, Int64},1}
     return αW_new
 end
 
-function update_βW(βW::SuperMatrix, spike_list::Array{Tuple{Float64, Int64},1})
-    βW_new = copy(βW.matrix)
+function update_θW(θW::SuperMatrix, spike_list::Array{Tuple{Float64, Int64},1})
+    β_new = 1 ./ copy(θW.matrix)
     for (_,np) in spike_list
-        βW_new[:,np] .+= 1
+        β_new[:,np] .+= 1
     end
-    return βW_new
+    return 1 ./ β_new
 end
 
 function update_αR(αR::SuperArray, spike_list::Array{Tuple{Float64, Int64},1}, parents::Array{Int64,1}, NK::Int)
@@ -40,8 +34,8 @@ function update_αR(αR::SuperArray, spike_list::Array{Tuple{Float64, Int64},1},
     return αR.array + h.weights
 end
 
-function update_βR(βR::SuperArray, spike_list::Array{Tuple{Float64, Int64},1}, parents::Array{Int64,1})
-    βR_new = copy(βR.array)
+function update_θR(θR::SuperArray, spike_list::Array{Tuple{Float64, Int64},1}, parents::Array{Int64,1})
+    βR_new = 1 ./ copy(θR.array)
     for (s,(tc,nc)) in enumerate(spike_list)
         p = parents[s]
         if p > 0
@@ -49,7 +43,7 @@ function update_βR(βR::SuperArray, spike_list::Array{Tuple{Float64, Int64},1},
             βR_new[np] += tc-tp
         end
     end
-    return βR_new
+    return 1 ./ βR_new
 end
 
 
@@ -64,27 +58,37 @@ function update_posteriors!(P::SuperHawkesProcess, spikes::Spikes)
     source_spikes = spike_list[findall(p -> p==0, parents)]
     # Update α0
     α0_new = update_α0(P.bias.α0, source_spikes, N*K)
-    # Update β0
-    β0_new = update_β0(P.bias.α0, T)
-    # Update π0
-    π0_new = update_π0(P.bias.α0, source_spikes, N*K)
+    # Update θ0
+    θ0_new = update_θ0(P.bias.α0, T)
 
     ## NETWORK UPDATES
     # Update αW
     αW_new = update_αW(P.network.αW, spike_list, parents)
-    # Update βW
-    βW_new = update_βW(P.network.βW, spike_list)
+    # Update θW
+    θW_new = update_θW(P.network.θW, spike_list)
 
     ## KERNEL UPDATES
     # Update αR
     αR_new = update_αR(P.kernel.αR, spike_list, parents, N*K)
-    # Update βR
-    βR_new = update_βR(P.kernel.βR, spike_list, parents)
+    # Update θR
+    θR_new = update_θR(P.kernel.θR, spike_list, parents)
 
     ## PROCESS UPDATE 
     # Create a new SuperHawkesProcess with these new attributes
-    P = SuperHawkesProcess(N = N, K = K, T = T,
-    prior_α0 = α0_new, prior_β0 = β0_new, prior_π0 = π0_new,
-    prior_αW = αW_new, prior_βW = βW_new,
-    prior_αR = αR_new, prior_βR = βR_new)
+    P_new = SuperHawkesProcess(N = N, K = K, T = T,
+    prior_α0 = α0_new, prior_θ0 = θ0_new, 
+    prior_αW = αW_new, prior_θW = θW_new,
+    prior_αR = αR_new, prior_θR = θR_new)
+
+    # Update the old SuperHawkesProcess
+    ## NOTE: I should've just been able to redefine P = P_new... why doesn't this work?
+    P.bias.α0 = P_new.bias.α0
+    P.bias.θ0 = P_new.bias.θ0
+    P.bias.λ0 = P_new.bias.λ0
+    P.network.αW = P_new.network.αW
+    P.network.θW =  P_new.network.θW 
+    P.network.W = P_new.network.W
+    P.kernel.αR = P_new.kernel.αR 
+    P.kernel.θR =  P_new.kernel.θR
+    P.kernel.rate = P_new.kernel.rate 
 end
