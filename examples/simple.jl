@@ -24,29 +24,30 @@ function posterior_accuracy(P̂::SuperHawkesProcess, P::SuperHawkesProcess)
     ΔθR = norm(P̂.kernel.θR.array - P.kernel.θR.array)
     Δrate = norm(P̂.kernel.rate.array - P.kernel.rate.array)
 
-    return [Δα0,Δθ0,ΔαW,ΔθW,ΔαR,ΔθR]
-    #return [Δλ0,ΔW,Δrate]
+    #return [Δα0,Δθ0,ΔαW,ΔθW,ΔαR,ΔθR]
+    return [Δλ0,ΔW,Δrate]
 end
 
 # Parameters
-Random.seed!(1234)
+Random.seed!(12345)
 Profile.clear()
 N, T, K = 20, 100, 3
-niter = 100
+niter = 500
 
 # Create a SuperHawkesProcess for sampling
 true_SHP = SuperHawkesProcess(N=N,T=T,K=K)
+println("Sampling from true Hawkes process")
 true_spikes = sample(true_SHP)
 true_parents = get_parents(true_spikes)
 true_sequenceIDs = get_sequenceIDs(true_spikes)
 S = length(true_spikes)
 
 ## Create a SuperHawkes Process for fitting
-SHP = true_SHP#SuperHawkesProcess(N=N,T=T,K=K)
+SHP = SuperHawkesProcess(N=N,T=T,K=K)
 
 ### Initialize spikes and parents for inference
 spikes = copy(true_spikes)
-spikes.sequenceIDs = rand(1:K,S) # Assign all spikes to sequence 1. This also automatically updates spikes.supernodes 
+spikes.sequenceIDs = rand(1:K,S) # Assign all spikes to random sequence. This also automatically updates spikes.supernodes 
 spikes.parents = zeros(Int64,S) # Assign all spikes to background process
 
 parent_acc = []
@@ -54,7 +55,9 @@ sequence_acc = []
 posterior_acc = []
 
 lookbacks = get_lookback_spikes(SHP.ΔT_max, spikes)
-for i in 1:niter   
+println("Fitting test Hawkes process to data")
+for i in 1:niter
+    print(i,"-")
     push!(parent_acc, accuracy(get_parents(spikes), true_parents))
     push!(sequence_acc, accuracy(get_sequenceIDs(spikes),true_sequenceIDs))  
     push!(posterior_acc, posterior_accuracy(SHP, true_SHP))

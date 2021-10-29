@@ -20,7 +20,7 @@ end
 function make_θ0(N::Int, K::Int, prior_θ0=nothing)
     if isnothing(prior_θ0)
         #The default is to assign a different θ0 to each sequence
-        prior_θ0 = repeat(rand(K),inner=N)
+        prior_θ0 = ones(N*K)#repeat(rand(K),inner=N)
     end
     SuperArray(N=N,K=K,array=prior_θ0)
 end
@@ -357,7 +357,7 @@ function generate_descendants!(P::SuperHawkesProcess, spikes, parents, s, ωs, d
         @assert(ñp̃ == ñ && k̃p̃ == k̃)
 
         for _ in 1:S_nc
-            tc = t + sample(P.kernel, n)
+            tc = t + sample(P.kernel, n) #the temporal profile only depends on the parent
             if tc <= T
                 sc = (nc, tc, ñc̃, k̃c̃)
 
