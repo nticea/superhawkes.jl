@@ -6,21 +6,14 @@ import Base: length
 
 function make_α0(N::Int, K::Int, prior_α0=nothing)
     if isnothing(prior_α0)
-        prior_α0 = zeros(N*K) .+ eps()
-        #Each sequence sources a non-overlapping subset of nodes
-        for k in 1:K
-            start_idx = (k-1)*(N+1) + 1 + (k-1)*div(N,K)
-            end_idx = min(N*K,start_idx+1)#div(N,K))
-            prior_α0[start_idx:end_idx] .= 1
-        end
+        prior_α0 = 1/(N*K) .* ones(N*K)
     end
     SuperArray(N=N,K=K,array=prior_α0)
 end
 
 function make_θ0(N::Int, K::Int, prior_θ0=nothing)
     if isnothing(prior_θ0)
-        #The default is to assign a different θ0 to each sequence
-        prior_θ0 = ones(N*K)#repeat(rand(K),inner=N)
+        prior_θ0 = ones(N*K)
     end
     SuperArray(N=N,K=K,array=prior_θ0)
 end
@@ -63,7 +56,7 @@ end
 function make_αW(N::Int, K::Int, prior_αW=nothing)
     if isnothing(prior_αW)
         #low connectivity within a sequences, effectively zero connectivity between sequences 
-        prior_αW = eps().*ones((N,K,N,K))
+        prior_αW = ones((N,K,N,K)) ./ (N*K)#eps().*ones((N,K,N,K))
         for k in 1:K
             prior_αW[:,k,:,k] .= 1
         end
@@ -74,12 +67,12 @@ end
 
 function make_θW(N::Int, K::Int, prior_θW=nothing)
     if isnothing(prior_θW)
-        prior_θW = eps().*ones((N,K,N,K))
+        prior_θW = ones((N,K,N,K))#eps().*ones((N,K,N,K))
         for k in 1:K
             prior_θW[:,k,:,k] .= N*NETWORK_SPARSITY
         end
         prior_θW = flatten_dims(prior_θW,N,K)
-        #TODO: add a few instances of cross-sequence spike induction!
+        #TODO: How do we create a good uninformative prior for cross-sequence spike induction?
     end
     SuperMatrix(N=N,K=K,matrix=prior_θW)
 end
@@ -123,7 +116,7 @@ end
 function make_αR(N::Int, K::Int, prior_αR=nothing)
     if isnothing(prior_αR)
         #The default is to return all ones
-        prior_αR = ones(N*K)
+        prior_αR = ones(N*K) ./ (N*K)
     end
     SuperArray(N=N,K=K,array=prior_αR)
 end
@@ -131,7 +124,7 @@ end
 function make_θR(N::Int, K::Int, prior_θR=nothing)
     if isnothing(prior_θR)
         #The default is to assign a different θ0 to each sequence
-        prior_θR = repeat(rand(K),inner=N)
+        prior_θR = ones(N*K) ./ (N*K)
     end
     SuperArray(N=N,K=K,array=prior_θR)
 end
@@ -173,19 +166,19 @@ end
 #rewrite the pdf method for the Kernel struct
 function evaluate_pdf(kernel::Kernel, ΔT::Real, n::Int, k=nothing)
     if isnothing(k) #if we get only one index, that means we are indexing into the flattened superprocess
-        return pdf(Exponential(1/kernel.rate[n]), ΔT)
+        return pdf(Exponential(1 ./ kernel.rate[n]), ΔT)
     else #return index of matrix formulation
         @assert(typeof(k)==Int)
-        return pdf(Exponential(1/kernel.rate[n,k]), ΔT)
+        return pdf(Exponential(1 ./ kernel.rate[n,k]), ΔT)
     end
 end
 
 function sample(kernel::Kernel, n::Int, k=nothing)
     if isnothing(k) #if we get only one index, that means we are indexing into the flattened superprocess
-        return rand(Exponential(1/kernel.rate[n]))
+        return rand(Exponential(1 ./ kernel.rate[n]))
     else #return index of matrix formulation
         @assert(typeof(k)==Int)
-        return rand(Exponential(1/kernel.rate[n,k]))
+        return rand(Exponential(1 ./ kernel.rate[n,k]))
     end
 end
 
@@ -220,7 +213,7 @@ function SuperHawkesProcess(;N::Int,K::Int=1,T::Real, #unless specified, we assu
     @assert(isnothing(prior_θR) || size(prior_θR)==(N*K,))
 
     #compute the relevant attributes of the Hawkes struct
-    ΔT_max = T/10 
+    ΔT_max = T/100 
     bias = Bias(N,K,prior_α0,prior_θ0)
     network = Network(N,K,prior_αW,prior_θW)
     kernel = Kernel(N,K,prior_αR,prior_θR)

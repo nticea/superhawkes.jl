@@ -11,7 +11,6 @@ Gibbs sampler for the parent assignments
 function get_lookback_spikes(τ_max::Real, spikes::Spikes) 
     spike_list = partially_observed_spikes(spikes)
     lookback_spikes = [
-        #tc - ΔT_max < tp < tc
         findall(s -> t - τ_max < s[1] < t, spike_list) for (t,n) in spike_list
     ]
     return lookback_spikes  
@@ -46,14 +45,23 @@ function sample_parents!(P::SuperHawkesProcess, spikes::Spikes, lookbacks::Vecto
         else
             parent_list[j] = lookbacks[j][sample]
         end
+        
+        ## DEBUGGING ##
         # if parent_list[j] != true_parents[j] && true_parents[j]>0
         #     tp,np = spike_list[true_parents[j]]
 
         #     println("")
         #     println("Spike: ", j, " True parent: ", true_parents[j])
+
+        #     S_close = length(lookbacks[j])
+        #     probs = zeros(S_close + 1)
+        #     probs[1] = λ0[n]
+
         #     for (ωj, (tp, np)) in enumerate(spike_list[lookbacks[j]])
         #         probs[ωj+1] = W[n, np] * evaluate_pdf(kernel, t-tp, np)
         #         println("probability of ", lookbacks[j][ωj], ": ", probs[ωj+1])
+        #         println("Network prob: ", W[n, np])
+        #         println("Rate prob: ", evaluate_pdf(kernel, t-tp, np))
         #     end
 
         #     #println("Probs: ", probs)
@@ -70,7 +78,7 @@ function sample_parents!(P::SuperHawkesProcess, spikes::Spikes, lookbacks::Vecto
         #     # println("True child process: ", full_spike_list[j][3])
         #     # println("True parent network (indexing into tensor): ", W[full_spike_list[j][2],full_spike_list[j][3],
         #     #         full_spike_list[true_parents[j]][2],full_spike_list[true_parents[j]][3]])
-        # end
+        #end
     end
     spikes.parents = convert(Array{Int,1},parent_list)
 end
