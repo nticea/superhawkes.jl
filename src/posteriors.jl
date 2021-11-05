@@ -121,7 +121,7 @@ function update_posteriors!(P::SuperHawkesProcess, spikes::Spikes, P_true::Super
     θR_new = update_θR(P.kernel.θR, spike_list, parents)
 
     ## PROCESS UPDATE 
-    P.bias.λ0 = sample_λ0(N, K, α0_new, θ0_new)
-    P.network.W = sample_W(N, K, αW_new, θW_new)
+    P.bias.λ0 = P_true.bias.λ0#sample_λ0(N, K, α0_new, θ0_new)
+    P.network.W = P_true.network.W#sample_W(N, K, αW_new, θW_new)
     P.kernel.rate = sample_rate(N, K, αR_new, θR_new)
 end

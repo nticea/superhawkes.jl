@@ -368,3 +368,51 @@ end
 function plot_spikes(spikes::Spikes)
     scatter(spikes.times, spikes.actualnodes, c=spikes.sequenceIDs)
 end
+
+### LOGJOINT PROBABILITIES ### 
+
+function logprob_prior(bias::Bias)
+    prior = Gamma.(bias.α0.array, bias.θ0.array)
+    probs = pdf.(prior, bias.λ0.array)
+    sum(log.(probs))
+end
+
+function logprob_prior(network::Network)
+    prior = Gamma.(network.αW.matrix, network.θW.matrix)
+    probs = pdf.(prior, network.W.matrix)
+    sum(log.(probs))
+end
+
+function logprob_prior(kernel::Kernel)
+    prior = Gamma.(kernel.αR.array, kernel.θR.array)
+    probs = pdf.(prior, kernel.rate.array)
+    sum(log.(probs))
+end
+
+function logprob_prior(P::SuperHawkesProcess)
+    logprob_prior(P.bias) + logprob_prior(P.network) + logprob_prior(P.kernel)
+end
+
+function loglike_data(P::SuperHawkesProcess, data::Spikes)
+
+    spikes = [(data.times[i], data.supernodes[i], data.parents[i]) for i in 1:length(data)]
+
+    function loglike_spike(spike)
+        t, n, ω = spike # Spike under consideration
+
+        ll = sum(-P.network.W.matrix[:,n]) # Initialize loglike term 
+        if ω==0
+            ll + log(P.bias.λ0[n])
+        else
+            tp, np, _ = spikes[ω] # Parent of this spike
+            ll + log(P.network.W[n,np] * evaluate_pdf(P.kernel, t-tp, np))
+        end
+        return ll
+    end
+
+    loglike = -P.T * sum(P.bias.λ0.array) + sum(loglike_spike.(spikes))
+end
+
+function logjoint(P::SuperHawkesProcess, data::Spikes)
+    logprob_prior(P) + loglike_data(P, data)
+end

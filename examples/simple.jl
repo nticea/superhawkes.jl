@@ -31,13 +31,15 @@ SHP = SuperHawkesProcess(N=N,T=T,K=K) #uninformative priors
 
 ### Initialize spikes and parents for inference
 spikes = copy(true_spikes)
-#spikes.sequenceIDs = rand(1:K,S) # Assign all spikes to random sequence. This also automatically updates spikes.supernodes 
-#spikes.parents = zeros(Int64,S) # Assign all spikes to background process
+spikes.sequenceIDs = rand(1:K,S) # Assign all spikes to random sequence. This also automatically updates spikes.supernodes 
+spikes.parents = zeros(Int64,S) # Assign all spikes to background process
 
 parent_acc = []
 nonzero_parent_acc = []
 sequence_acc = []
 posterior_acc = []
+logjoint_prob = []
+loglike_prob = []
 
 lookbacks = get_lookback_spikes(SHP.ΔT_max, spikes)
 println("Fitting test Hawkes process to data")
@@ -47,25 +49,31 @@ for i in 1:niter
     push!(nonzero_parent_acc, accuracy(get_parents(spikes)[true_parents .> 0], true_parents[true_parents .> 0]))
     push!(sequence_acc, accuracy(get_sequenceIDs(spikes),true_sequenceIDs))  
     push!(posterior_acc, posterior_accuracy(SHP, true_SHP))
+    push!(logjoint_prob, logjoint(SHP, spikes))
+    push!(loglike_prob, loglike_data(SHP, spikes))
     
     # resample posteriors
     update_posteriors!(SHP, spikes, true_SHP)
     
     # resample sequence IDs. NOTE: code runs much better when this precedes the parent resampling
-    #alphas = forward_pass_tree(SHP, spikes)
-    #backward_sample_tree!(SHP, spikes, alphas)
+    alphas = forward_pass_tree(SHP, spikes)
+    backward_sample_tree!(SHP, spikes, alphas)
 
     # resample parents
-    #sample_parents!(SHP, spikes, lookbacks, true_parents)
+    sample_parents!(SHP, spikes, lookbacks, true_parents)
 end
+
 
 plot(1:niter,sequence_acc,label="Sequence assignemnts")
 plot!(1:niter,parent_acc,label="Parent assignments")
 plot!(1:niter,nonzero_parent_acc,label="Nonzero parent assignments")
 
-plot(1:niter,[p[1] for p in posterior_acc],label="λ0 assignments")
-plot!(1:niter,[p[2] for p in posterior_acc],label="W assignments")
-plot!(1:niter,[p[3] for p in posterior_acc],label="rate assignments")
+# plot(1:niter,[p[1] for p in posterior_acc],label="λ0 assignments")
+# plot!(1:niter,[p[2] for p in posterior_acc],label="W assignments")
+# plot!(1:niter,[p[3] for p in posterior_acc],label="rate assignments")
+
+# plot(1:niter, loglike_prob,label="loglike")
+# plot(1:niter, logjoint_prob,label="logjoint")
 
 
 

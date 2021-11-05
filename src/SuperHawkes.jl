@@ -27,6 +27,7 @@ using Base: @kwdef
 export SuperHawkesProcess, Spikes
 export sample, resample, plot_spikes, partially_observed_spikes, fully_observed_spikes, length, get_parents, get_sequenceIDs
 export evaluate_pdf
+export logjoint, loglike_data
 
 # Inference
 export get_lookback_spikes, sample_parents!
