@@ -393,6 +393,10 @@ function logprob_prior(P::SuperHawkesProcess)
     logprob_prior(P.bias) + logprob_prior(P.network) + logprob_prior(P.kernel)
 end
 
+function all_logprob_priors(P::SuperHawkesProcess)
+    logprob_prior(P.bias), logprob_prior(P.network), logprob_prior(P.kernel)
+end
+
 function loglike_data(P::SuperHawkesProcess, data::Spikes)
 
     spikes = [(data.times[i], data.supernodes[i], data.parents[i]) for i in 1:length(data)]

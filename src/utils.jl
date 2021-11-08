@@ -1,5 +1,5 @@
 ### MAKE INTERESTING PRIORS ###
-NETWORK_SPARSITY = 0.005
+NETWORK_SPARSITY = 0.001
 
 ## Priors on λ0
 
@@ -59,17 +59,17 @@ function posterior_accuracy(P̂::SuperHawkesProcess, P::SuperHawkesProcess)
     # Compare the bias parameters
     Δα0 = norm(P̂.bias.α0.array - P.bias.α0.array)/norm(P.bias.α0.array)
     Δθ0 = norm(P̂.bias.θ0.array - P.bias.θ0.array)/norm(P.bias.θ0.array)
-    Δλ0 = norm(P̂.bias.λ0.array - P.bias.λ0.array)#/norm(P.bias.λ0.array)
+    Δλ0 = norm(P̂.bias.λ0.array - P.bias.λ0.array)/norm(P.bias.λ0.array)
 
     # Compare the network parameters
     ΔαW = norm(P̂.network.αW.matrix - P.network.αW.matrix)/norm(P.network.αW.matrix)
     ΔθW = norm(P̂.network.θW.matrix - P.network.θW.matrix)/norm(P.network.θW.matrix)
-    ΔW = norm(P̂.network.W.matrix - P.network.W.matrix)#/norm(P.network.W.matrix)
+    ΔW = norm(P̂.network.W.matrix - P.network.W.matrix)/norm(P.network.W.matrix)
 
     # Compare the kernel parameters
     ΔαR = norm(P̂.kernel.αR.array - P.kernel.αR.array)/norm(P.kernel.αR.array)
     ΔθR = norm(P̂.kernel.θR.array - P.kernel.θR.array)/norm(P.kernel.θR.array)
-    Δrate = norm(P̂.kernel.rate.array - P.kernel.rate.array)#/norm(P.kernel.rate.array)
+    Δrate = norm(P̂.kernel.rate.array - P.kernel.rate.array)/norm(P.kernel.rate.array)
 
     #return [Δα0,Δθ0,ΔαW,ΔθW,ΔαR,ΔθR]
     return [Δλ0,ΔW,Δrate]
