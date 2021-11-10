@@ -151,7 +151,7 @@ function Kernel(N::Int,K::Int,
                 prior_θR::Union{Array{Float64,1},Nothing}=nothing)
     #parameters
     αR::SuperArray = make_αR(N,K,prior_αR)
-    θR::SuperArray = make_αR(N,K,prior_θR)
+    θR::SuperArray = make_θR(N,K,prior_θR)#make_αR(N,K,prior_θR)
 
     #sample the parameters to get the kernel
     rate::SuperArray = sample_rate(N,K,αR,θR)
@@ -393,10 +393,6 @@ function logprob_prior(P::SuperHawkesProcess)
     logprob_prior(P.bias) + logprob_prior(P.network) + logprob_prior(P.kernel)
 end
 
-function all_logprob_priors(P::SuperHawkesProcess)
-    logprob_prior(P.bias), logprob_prior(P.network), logprob_prior(P.kernel)
-end
-
 function loglike_data(P::SuperHawkesProcess, data::Spikes)
 
     spikes = [(data.times[i], data.supernodes[i], data.parents[i]) for i in 1:length(data)]
@@ -419,4 +415,49 @@ end
 
 function logjoint(P::SuperHawkesProcess, data::Spikes)
     logprob_prior(P) + loglike_data(P, data)
+end
+
+### FUNCTIONS FOR COMPUTING EXACT HAWKES LOGLIKELIHOOD
+# Only valid for K=1 case 
+
+function exact_loglike(P::SuperHawkesProcess, data::Spikes)
+    @assert P.K == 1 # We can only compute the exact loglikelihood for a process with only 1 type
+    
+    spikes = partially_observed_spikes(data)
+    T = P.T
+    N = P.N
+    λ0 = P.bias.λ0
+    W = P.network.W
+    rate = P.kernel.rate
+
+    loglike = 0
+
+    # Compute normalization terms
+    # ∏_n exp(-∫ λn(t | Ht))
+    for n in 1:N
+        # Z = - ∫  λ_n(t | H_t) dt
+        # = - ∫ λ0[n] + ∑_{s ∈ Ht} W[n, ns] * (1/Rn) * exp(-Rn * (t - ts)) dt
+        # = - (  T * λ0[n]  ) - (   ∑_s W[n, ns]  )
+        loglike -= T * λ0[n]
+        for (ts,ns) in spikes
+            loglike -= W[n,ns]
+        end
+    end
+
+    # Compute intensity at each spike
+    # ∏_s λ_{ns}(ts | H_{ts})
+    for (t,n) in spikes
+        # λ_{n}(t | Ht)
+        # = (  λ0[n]  ) + ∑_{s ∈ Ht} W[n, ns] * (1/Rn) exp(-(t - ts)/Rn)
+        
+        λ = λ0[n]
+        for (ts, ns) in spikes
+            if ts < t
+                λ += W[n,ns] * evaluate_pdf(P.kernel, t-ts, ns)
+            end
+        end
+        
+        loglike += log(λ)
+    end
+    return loglike
 end

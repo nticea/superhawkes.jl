@@ -41,16 +41,16 @@ function update_θW(θW::SuperMatrix, spike_list::Array{Tuple{Float64, Int64},1}
     N = θW.N
     K = θW.K
     βW_new = 1 ./ copy(θW.matrix)
-    # for (_,np) in spike_list
-    #     βW_new[:,np] .+= 1
-    # end
-    for (s,(_,nc)) in enumerate(spike_list)
-        p = parents[s]
-        if p>0
-            tp,np = spike_list[p]
-            βW_new[:,np] .+= 1
-        end
+    for (_,np) in spike_list
+        βW_new[:,np] .+= 1
     end
+    # for (s,(_,nc)) in enumerate(spike_list)
+    #     p = parents[s]
+    #     if p>0
+    #         tp,np = spike_list[p]
+    #         βW_new[:,np] .+= 1
+    #     end
+    # end
     θW_new = 1 ./ βW_new
     return SuperMatrix(N=N, K=K, matrix=θW_new)
 end
