@@ -1,6 +1,6 @@
 MAX_DEPTH = 4
 NETWORK_SPARSITY = 0.0007
-import Base: length
+import Base: length, copy
 
 ## PARAMETER STRUCTS ##
 
@@ -48,6 +48,8 @@ function Bias(N::Int,K::Int,
     λ0::SuperArray = sample_λ0(N,K,α0,θ0) #NK 
     return Bias(N,K,α0,θ0,λ0)
 end
+
+copy(bias::Bias) = Bias(bias.N, bias.K, bias.α0, copy(bias.θ0), copy(bias.λ0))
 
 function resample(bias::Bias)
     bias.λ0 = sample_λ0(bias.N,bias.K,bias.α0,bias.θ0)
@@ -109,6 +111,8 @@ function Network(N::Int,K::Int,
     return Network(N,K,αW,θW,W)
 end
 
+copy(network::Network) = Network(network.N, network.K, network.αW, copy(network.θW), copy(network.W))
+
 function resample(network::Network)
     bias.W = sample_W(network.N,network.K,network.αW,network.θW)
 end
@@ -158,6 +162,8 @@ function Kernel(N::Int,K::Int,
 
     return Kernel(N,K,αR,θR,rate)
 end
+
+copy(kernel::Kernel) = Kernel(kernel.N, kernel.K, kernel.αR, copy(kernel.θR), copy(kernel.rate))
 
 function resample(kernel::Kernel)
     bias.rate = sample_rate(kernel.N,kernel.K,kernel.αR,kernel.θR)
@@ -225,6 +231,7 @@ num_nodes(P::SuperHawkesProcess) = P.N
 num_sequences(P::SuperHawkesProcess) = P.K
 num_supernodes(P::SuperHawkesProcess) = P.N*P.K
 max_time(P::SuperHawkesProcess) = P.T
+copy(P::SuperHawkesProcess) = SuperHawkesProcess(P.N,P.K,P.T,P.ΔT_max,copy(P.bias),copy(P.network),copy(P.kernel))
 
 function check_W(P::SuperHawkesProcess)
     W = P.network.W.matrix

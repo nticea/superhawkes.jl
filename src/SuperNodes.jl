@@ -139,9 +139,9 @@ function Base.setproperty!(a::SuperMatrix, name::Symbol, x)
     end
 end
 
-Base.copy(a::SuperArray) = SuperArray(a.N,a.K,a.array,a.matrix)
+Base.copy(a::SuperArray) = SuperArray(copy(a.N),copy(a.K),copy(a.array),copy(a.matrix))
 
-Base.copy(a::SuperMatrix) = SuperMatrix(a.N,a.K,a.matrix,a.tensor)
+Base.copy(a::SuperMatrix) = SuperMatrix(copy(a.N),copy(a.K),copy(a.matrix),copy(a.tensor))
 
 #size(a::SuperArray): ((a.N,a.K), a.N*a.K)
 

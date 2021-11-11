@@ -124,4 +124,14 @@ function update_posteriors!(P::SuperHawkesProcess, spikes::Spikes, P_true::Super
     P.bias.λ0 = sample_λ0(N, K, α0_new, θ0_new)#P_true.bias.λ0
     P.network.W = sample_W(N, K, αW_new, θW_new)#P_true.network.W
     P.kernel.rate = sample_rate(N, K, αR_new, θR_new)#P_true.kernel.rate#
+
+    ## DEBUGGING
+    # println("α0: ", norm(α0_new.array-P.bias.α0.array))
+    # println("new: ", α0_new.array)
+    # println("true: ", P.bias.α0.array)
+    # println("θ0: ", norm(θ0_new.array-P.bias.θ0.array))
+    # println("αW: ", norm(αW_new.matrix-P.network.αW.matrix))
+    # println("θW: ", norm(θW_new.matrix-P.network.θW.matrix))
+    # println("αR: ", norm(αR_new.array-P.kernel.αR.array))
+    # println("θR: ", norm(θR_new.array-P.kernel.θR.array))
 end
