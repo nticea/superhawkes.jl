@@ -8,9 +8,9 @@ using LinearAlgebra
 Random.seed!(1234)
 Profile.clear()
 N, T, K = 20, 100, 3
-niter = 100
+niter = 500
 priors = "perturbed" #"true" #"uninformative"#"perturbed"#"copy"
-eta = 0 # Strength of perturbation
+η = 0.1# Strength of perturbation
 fix_parents = false
 fix_parameters = false
 fix_sequence_types = false
@@ -42,9 +42,9 @@ elseif priors == "copy"
     println("Copying the generative model")
     SHP = copy(true_SHP)
 elseif priors == "perturbed"
-    α0 = make_α0_prior_flat(N,K,eta)
+    α0 = make_α0_prior_flat(N,K,η)
     θ0 = make_θ0_prior_flat(N,K)
-    αW = make_αW_prior_flat(N,K,eta)
+    αW = make_αW_prior_flat(N,K,η)
     θW = make_θW_prior_flat(N,K)
     αR = make_αR_prior_flat(N,K)
     θR = make_θR_prior_flat(N,K)
@@ -127,6 +127,10 @@ plot!(1:niter,nonzero_parent_acc,label="Nonzero parent assignments")
 # plot(1:niter,[p[1] for p in logprob_priors],label="λ0 logprob")
 # plot!(1:niter,[p[2] for p in logprob_priors],label="W logprob")
 # plot!(1:niter,[p[3] for p in logprob_priors],label="rate logprob")
+
+if priors == "perturbed"
+    title!("Perturbation = ", η)
+end
 
 
 

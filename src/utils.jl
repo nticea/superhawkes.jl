@@ -10,13 +10,13 @@ function make_α0_prior(N::Int, K::Int)
     for k in 1:K
         start_idx = (k-1)*(N+1) + 1 + (k-1)*div(N,K)
         end_idx = min(N*K,start_idx+1)
-        prior_α0[start_idx:end_idx] .= (N*K)^2#1
+        prior_α0[start_idx:end_idx] .=1
     end
     return prior_α0
 end
 
-function make_α0_prior_flat(N::Int, K::Int, eta::Real)
-    prior_α0 = zeros(N*K) .+ eps() .+ eta
+function make_α0_prior_flat(N::Int, K::Int, η::Real)
+    prior_α0 = zeros(N*K) .+ eps() .+ η
     # Each sequence sources a non-overlapping subset of nodes
     for k in 1:K
         start_idx = (k-1)*(N+1) + 1 + (k-1)*div(N,K)
@@ -27,7 +27,7 @@ function make_α0_prior_flat(N::Int, K::Int, eta::Real)
 end
 
 function make_θ0_prior(N::Int, K::Int)
-    prior_θ0 = ones(N*K) ./ (N*K)^2 #repeat(rand(K),inner=N) 
+    prior_θ0 = ones(N*K) #repeat(rand(K),inner=N) 
 end
 
 function make_θ0_prior_flat(N::Int, K::Int)
@@ -41,16 +41,16 @@ function make_αW_prior(N::Int, K::Int)
     Δ = floor(Int64, N/K)
     for k in 1:K
         # Non-overlapping sections are filled 
-        prior_αW[(k-1)*Δ+1:min(k*Δ+1,N),k,:,k] .= (N*K)^2 
+        prior_αW[(k-1)*Δ+1:min(k*Δ+1,N),k,:,k] .= 1
         # Add a few instances of cross-sequence spike induction
         #prior_αW[rand(1:N*K),k,rand(1:N*K),k+1] .= 1
     end
     prior_αW = flatten_dims(prior_αW,N,K)
 end
 
-function make_αW_prior_flat(N::Int, K::Int, eta::Real)
+function make_αW_prior_flat(N::Int, K::Int, η::Real)
     # Within a sequence, we only have upper and lower diagonal elements 
-    prior_αW = eta .+ eps() .+ zeros((N,K,N,K))
+    prior_αW = η .+ eps() .+ zeros((N,K,N,K))
     @assert N>=K
     Δ = floor(Int64, N/K)
     for k in 1:K
@@ -63,7 +63,7 @@ function make_αW_prior_flat(N::Int, K::Int, eta::Real)
 end
 
 function make_θW_prior(N::Int, K::Int)
-    prior_θW = ones((N,K,N,K)) *N*NETWORK_SPARSITY ./ (N*K)^2
+    prior_θW = ones((N,K,N,K)) *N*NETWORK_SPARSITY 
     # for k in 1:K
     #     prior_θW[:,k,:,k] .= N*NETWORK_SPARSITY ./ (N*K)^2
     # end
@@ -71,24 +71,24 @@ function make_θW_prior(N::Int, K::Int)
 end
 
 function make_θW_prior_flat(N::Int, K::Int)
-    prior_θW = ones((N,K,N,K)) 
+    prior_θW = ones((N,K,N,K)) *N*NETWORK_SPARSITY 
     prior_θW = flatten_dims(prior_θW,N,K)
 end
 
 function make_αR_prior(N::Int, K::Int)
-    prior_αR = ones(N*K) .* (N*K)^2
+    prior_αR = ones(N*K) 
 end
 
 function make_αR_prior_flat(N::Int, K::Int)
-    prior_αR = ones(N*K)
+    prior_αR = ones(N*K) 
 end
 
 function make_θR_prior(N::Int, K::Int)
-    prior_θR = 1 ./ (ones(N*K) .* (N*K)^2) #1 ./ (repeat(rand(K),inner=N) .* (N*K)^2)
+    prior_θR = ones(N*K) #1 ./ (repeat(rand(K),inner=N) .* (N*K)^2)
 end
 
 function make_θR_prior_flat(N::Int, K::Int)
-    prior_θR = (ones(N*K))#1 ./ (repeat(rand(K),inner=N))
+    prior_θR = ones(N*K)
 end
 
 ### ACCURACY FUNCTIONS ###

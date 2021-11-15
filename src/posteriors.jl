@@ -11,7 +11,7 @@ function update_θ0(θ0::SuperArray, T::Real)
     N = θ0.N
     K = θ0.K
     β0_new = 1 ./ copy(θ0.array)
-    θ0_new = 1 ./ (β0_new .+= T) #Increment by T
+    θ0_new = 1 ./ (β0_new .+ T) #Increment by T
     return SuperArray(N=N,K=K,array=θ0_new)
 end
 
