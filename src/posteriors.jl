@@ -51,6 +51,13 @@ function update_θW(θW::SuperMatrix, spike_list::Array{Tuple{Float64, Int64},1}
     #         βW_new[:,np] .+= 1
     #     end
     # end
+    # for (sc, (tc,nc)) in enumerate(spike_list)
+    #     for (sp, (tp,np)) in enumerate(spike_list)
+    #         if parents[sc] == sp
+    #             βW_new[:,np] .+= 1
+    #         end
+    #     end
+    # end
     θW_new = 1 ./ βW_new
     return SuperMatrix(N=N, K=K, matrix=θW_new)
 end
@@ -121,17 +128,25 @@ function update_posteriors!(P::SuperHawkesProcess, spikes::Spikes, P_true::Super
     θR_new = update_θR(P.kernel.θR, spike_list, parents)
 
     ## PROCESS UPDATE 
-    P.bias.λ0 = sample_λ0(N, K, α0_new, θ0_new)#P_true.bias.λ0
-    P.network.W = sample_W(N, K, αW_new, θW_new)#P_true.network.W
-    P.kernel.rate = sample_rate(N, K, αR_new, θR_new)#P_true.kernel.rate#
+    #println("")
+    # println("True αR: ", P_true.kernel.αR.array)
+    # println("Inferred αR: ", αR_new.array)
+    # println("True θR: ", P_true.kernel.θR.array)
+    # println("Inferred θR: ", θR_new.array)
+    # println("True mean: ", P_true.kernel.αR.array .* P_true.kernel.θR.array)
+    # println("Inferred mean: ", αR_new.array .* θR_new.array)
+    # println("True variance: ", P_true.kernel.αR.array .*( P_true.kernel.θR.array .^2))
+    # println("Inferred variance: ", αR_new.array .* (θR_new.array) .^2)
+    # println("True rate: ", P_true.kernel.rate.array)
+    # println("rate sampled from true priors: ", sample_rate(N, K, P_true.kernel.αR, P_true.kernel.θR).array)
+    # println("rate sampled from inferred priors: ", sample_rate(N, K, αR_new, θR_new).array)
+    P.bias.λ0 = sample_λ0(N, K, α0_new, θ0_new)#
+    P.network.W = sample_W(N, K, αW_new, θW_new)#
+    P.kernel.rate = sample_rate(N, K, αR_new, θR_new)#
 
-    ## DEBUGGING
-    # println("α0: ", norm(α0_new.array-P.bias.α0.array))
-    # println("new: ", α0_new.array)
-    # println("true: ", P.bias.α0.array)
-    # println("θ0: ", norm(θ0_new.array-P.bias.θ0.array))
-    # println("αW: ", norm(αW_new.matrix-P.network.αW.matrix))
-    # println("θW: ", norm(θW_new.matrix-P.network.θW.matrix))
-    # println("αR: ", norm(αR_new.array-P.kernel.αR.array))
-    # println("θR: ", norm(θR_new.array-P.kernel.θR.array))
+    #P.bias.λ0 = sample_λ0(N, K, P_true.bias.α0, P_true.bias.θ0)#P_true.bias.λ0
+    #P.network.W =sample_W(N, K, P_true.network.αW, P_true.network.θW)#P_true.network.W#
+    #P.kernel.rate = sample_rate(N, K, P_true.kernel.αR, P_true.kernel.θR)#P_true.kernel.rate#
+
+
 end

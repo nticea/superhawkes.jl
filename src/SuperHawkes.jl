@@ -38,6 +38,7 @@ export update_posteriors!
 
 # Utility functions
 export make_α0_prior, make_θ0_prior, make_αW_prior, make_θW_prior, make_αR_prior, make_θR_prior
+export make_α0_prior_flat, make_θ0_prior_flat, make_αW_prior_flat, make_θW_prior_flat, make_αR_prior_flat, make_θR_prior_flat
 export accuracy, posterior_accuracy
 
 # ===

@@ -7,10 +7,11 @@ using LinearAlgebra
 # Parameters
 Random.seed!(1234)
 Profile.clear()
-N, T, K = 20, 100, 1
-niter =250
-priors = "none" #"true" #"uninformative"
-fix_parents = true
+N, T, K = 20, 100, 3
+niter = 100
+priors = "perturbed" #"true" #"uninformative"#"perturbed"#"copy"
+eta = 0 # Strength of perturbation
+fix_parents = false
 fix_parameters = false
 fix_sequence_types = false
 
@@ -37,9 +38,17 @@ if priors == "uninformative"
 elseif priors == "true"
     println("Creating a test Hawkes process drawn from the true priors")
     SHP = SuperHawkesProcess(N=N,K=K,T=T,prior_α0=α0,prior_θ0=θ0,prior_αW=αW,prior_θW=θW,prior_αR=αR,prior_θR=θR)
-elseif priors == "none"
+elseif priors == "copy"
     println("Copying the generative model")
     SHP = copy(true_SHP)
+elseif priors == "perturbed"
+    α0 = make_α0_prior_flat(N,K,eta)
+    θ0 = make_θ0_prior_flat(N,K)
+    αW = make_αW_prior_flat(N,K,eta)
+    θW = make_θW_prior_flat(N,K)
+    αR = make_αR_prior_flat(N,K)
+    θR = make_θR_prior_flat(N,K)
+    SHP = SuperHawkesProcess(N=N,K=K,T=T,prior_α0=α0,prior_θ0=θ0,prior_αW=αW,prior_θW=θW,prior_αR=αR,prior_θR=θR)
 end
 
 ## Initialize spikes and parents for inference
@@ -98,22 +107,22 @@ for i in 1:niter
 end
 
 
-# plot(1:niter,sequence_acc,label="Sequence assignemnts")
-# plot!(1:niter,parent_acc,label="Parent assignments")
-# plot!(1:niter,nonzero_parent_acc,label="Nonzero parent assignments")
+plot(1:niter,sequence_acc,label="Sequence assignemnts")
+plot!(1:niter,parent_acc,label="Parent assignments")
+plot!(1:niter,nonzero_parent_acc,label="Nonzero parent assignments")
 
-plot(1:niter,[p[1] for p in posterior_acc],label="λ0 MSE")
-plot!(1:niter,[p[2] for p in posterior_acc],label="W MSE")
-plot!(1:niter,[p[3] for p in posterior_acc],label="rate MSE")
+# plot(1:niter,[p[1] for p in posterior_acc],label="λ0 MSE")
+# plot!(1:niter,[p[2] for p in posterior_acc],label="W MSE")
+# plot!(1:niter,[p[3] for p in posterior_acc],label="rate MSE")
 
 # display(plot(1:niter, loglike_prob,label="loglike"))
 # display(plot(1:niter, logjoint_prob,label="logjoint"))
 
-#if K==1 
-    #plot(1:niter, exact_loglike_prob,label="Loglike for K=1")
-    #plot!(1:niter, loglike_prob,label="Loglike with parent augmentation for K=1")
-    #hline!([exact_loglike(true_SHP, true_spikes)], linestyle=:dash, label="True loglike")
-#end
+# if K==1 
+#     plot(1:niter, exact_loglike_prob,label="Loglike for K=1")
+#     plot!(1:niter, loglike_prob,label="Loglike with parent augmentation for K=1")
+#     hline!([exact_loglike(true_SHP, true_spikes)], linestyle=:dash, label="True loglike")
+# end
 
 # plot(1:niter,[p[1] for p in logprob_priors],label="λ0 logprob")
 # plot!(1:niter,[p[2] for p in logprob_priors],label="W logprob")

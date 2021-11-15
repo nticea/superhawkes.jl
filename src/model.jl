@@ -6,7 +6,7 @@ import Base: length, copy
 
 function make_α0(N::Int, K::Int, prior_α0=nothing)
     if isnothing(prior_α0)
-        prior_α0 = 1/(N*K) .* ones(N*K)
+        prior_α0 = ones(N*K)
     end
     SuperArray(N=N,K=K,array=prior_α0)
 end
@@ -51,14 +51,14 @@ end
 
 copy(bias::Bias) = Bias(bias.N, bias.K, bias.α0, copy(bias.θ0), copy(bias.λ0))
 
-function resample(bias::Bias)
+function resample!(bias::Bias)
     bias.λ0 = sample_λ0(bias.N,bias.K,bias.α0,bias.θ0)
 end
 
 function make_αW(N::Int, K::Int, prior_αW=nothing)
     if isnothing(prior_αW)
         #low connectivity within a sequences, effectively zero connectivity between sequences 
-        prior_αW = ones((N,K,N,K)) ./ (N*K)#eps().*ones((N,K,N,K))
+        prior_αW = ones((N,K,N,K)) ./ (N*K)^2
         for k in 1:K
             prior_αW[:,k,:,k] .= 1
         end
@@ -69,9 +69,9 @@ end
 
 function make_θW(N::Int, K::Int, prior_θW=nothing)
     if isnothing(prior_θW)
-        prior_θW = ones((N,K,N,K))#eps().*ones((N,K,N,K))
+        prior_θW = ones((N,K,N,K)) ./ (N*K)^2#ones((N,K,N,K))#eps().*ones((N,K,N,K))
         for k in 1:K
-            prior_θW[:,k,:,k] .= N*NETWORK_SPARSITY
+            prior_θW[:,k,:,k] .= 1#N*NETWORK_SPARSITY
         end
         prior_θW = flatten_dims(prior_θW,N,K)
         #TODO: How do we create a good uninformative prior for cross-sequence spike induction?
@@ -113,14 +113,14 @@ end
 
 copy(network::Network) = Network(network.N, network.K, network.αW, copy(network.θW), copy(network.W))
 
-function resample(network::Network)
-    bias.W = sample_W(network.N,network.K,network.αW,network.θW)
+function resample!(network::Network)
+    network.W = sample_W(network.N,network.K,network.αW,network.θW)
 end
 
 function make_αR(N::Int, K::Int, prior_αR=nothing)
     if isnothing(prior_αR)
         #The default is to return all ones
-        prior_αR = ones(N*K) ./ (N*K)
+        prior_αR = ones(N*K) 
     end
     SuperArray(N=N,K=K,array=prior_αR)
 end
@@ -128,7 +128,7 @@ end
 function make_θR(N::Int, K::Int, prior_θR=nothing)
     if isnothing(prior_θR)
         #The default is to assign a different θ0 to each sequence
-        prior_θR = ones(N*K) ./ (N*K)
+        prior_θR = ones(N*K) 
     end
     SuperArray(N=N,K=K,array=prior_θR)
 end
@@ -165,8 +165,8 @@ end
 
 copy(kernel::Kernel) = Kernel(kernel.N, kernel.K, kernel.αR, copy(kernel.θR), copy(kernel.rate))
 
-function resample(kernel::Kernel)
-    bias.rate = sample_rate(kernel.N,kernel.K,kernel.αR,kernel.θR)
+function resample!(kernel::Kernel)
+    kernel.rate = sample_rate(kernel.N,kernel.K,kernel.αR,kernel.θR)
 end
 
 #rewrite the pdf method for the Kernel struct
